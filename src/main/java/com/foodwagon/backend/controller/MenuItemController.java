@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 public class MenuItemController {
 
     private final MenuItemService service;
-    private final SimpMessagingTemplate messagingTemplate;
 
     /* ADD ITEM */
     @PostMapping
@@ -25,16 +24,6 @@ public class MenuItemController {
     @PatchMapping("/{id}/toggle-stock")
     public MenuItem toggleStock(@PathVariable Long id) {
         MenuItem updatedItem = service.toggleStock(id);
-
-        // 🔔 Notify all customers viewing this restaurant's menu
-        messagingTemplate.convertAndSend(
-                "/topic/restaurant." + updatedItem.getRestaurantId() + ".stock",
-                new StockUpdatePayload(
-                        String.valueOf(updatedItem.getId()),
-                        updatedItem.getInStock() // ✅ Boolean field uses getInStock()
-                )
-        );
-
         return updatedItem;
     }
 

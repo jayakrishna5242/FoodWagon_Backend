@@ -14,18 +14,11 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
-    private final SimpMessagingTemplate messagingTemplate;
 
     /* PLACE ORDER */
     @PostMapping
     public OrderResponse placeOrder(@RequestBody CreateOrderRequest request) {
         OrderResponse savedOrder = orderService.placeOrder(request);
-
-        // 🔔 Notify restaurant dashboard — matches frontend: /topic/restaurant.{id}
-        messagingTemplate.convertAndSend(
-                "/topic/restaurant." + savedOrder.restaurantId(),
-                savedOrder
-        );
 
         return savedOrder;
     }
@@ -50,11 +43,7 @@ public class OrderController {
     ) {
         OrderStatusUpdateRequest updated = orderService.updateStatus(orderId, request);
 
-        // 🔔 Notify specific customer — matches frontend: /user/queue/order-status
-        messagingTemplate.convertAndSend(
-                "/topic/user." + updated.userId() + ".order-status",
-                updated
-        );
+
 
         return updated;
     }
