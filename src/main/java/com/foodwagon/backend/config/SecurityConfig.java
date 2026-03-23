@@ -64,19 +64,6 @@ public class SecurityConfig {
         return source;
     }
 
-    // ✅ Dedicated filter chain for WebSocket — bypasses JWT completely
-    @Bean
-    public SecurityFilterChain webSocketSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/ws/**")
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
-                );
-        return http.build();
-    }
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -94,11 +81,11 @@ public class SecurityConfig {
                         // ─── Partner public routes (no JWT needed) ────────
                         .requestMatchers("/api/partner/login").permitAll()
                         .requestMatchers("/api/partner/register").permitAll()
-                        .requestMatchers("/api/partner/*/restaurant").permitAll() // ✅ fetchPartnerRestaurant
-                        .requestMatchers("/api/partner/**").permitAll()           // ✅ all other partner routes
+                        .requestMatchers("/api/partner/*/restaurant").permitAll()
+                        .requestMatchers("/api/partner/**").permitAll()
 
                         // ─── Menu items public read ───────────────────────
-                        .requestMatchers("/api/menu-items/**").permitAll()        // ✅ menu fetch for customers
+                        .requestMatchers("/api/menu-items/**").permitAll()
 
                         // ─── Orders need auth ─────────────────────────────
                         .requestMatchers("/api/orders/**").authenticated()
