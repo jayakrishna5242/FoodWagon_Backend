@@ -4,15 +4,16 @@ import com.foodwagon.backend.dto.menu.MenuItemRequest;
 import com.foodwagon.backend.entity.MenuItem;
 import com.foodwagon.backend.service.MenuItemService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/menu-items")
 @RequiredArgsConstructor
-
 public class MenuItemController {
 
     private final MenuItemService service;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /* ADD ITEM */
     @PostMapping
@@ -23,7 +24,18 @@ public class MenuItemController {
     /* TOGGLE STOCK */
     @PatchMapping("/{id}/toggle-stock")
     public MenuItem toggleStock(@PathVariable Long id) {
-        return service.toggleStock(id);
+        MenuItem updatedItem = service.toggleStock(id);
+
+        // 🔔 Notify all customers viewing this restaurant's menu
+        messagingTemplate.convertAndSend(
+                "/topic/restaurant." + updatedItem.getRestaurantId() + ".stock",
+                new StockUpdatePayload(
+                        String.valueOf(updatedItem.getId()),
+                        updatedItem.getInStock() // ✅ Boolean field uses getInStock()
+                )
+        );
+
+        return updatedItem;
     }
 
     /* UPDATE ITEM */
@@ -34,4 +46,7 @@ public class MenuItemController {
     ) {
         return service.update(id, request);
     }
+
+    // ✅ Payload matching frontend { itemId, inStock }
+    record StockUpdatePayload(String itemId, boolean inStock) {}
 }

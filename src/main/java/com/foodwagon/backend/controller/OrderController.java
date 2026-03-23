@@ -3,6 +3,7 @@ package com.foodwagon.backend.controller;
 import com.foodwagon.backend.dto.order.*;
 import com.foodwagon.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -10,15 +11,23 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
-
 public class OrderController {
 
     private final OrderService orderService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /* PLACE ORDER */
     @PostMapping
     public OrderResponse placeOrder(@RequestBody CreateOrderRequest request) {
-        return orderService.placeOrder(request);
+        OrderResponse savedOrder = orderService.placeOrder(request);
+
+        // 🔔 Notify restaurant dashboard — matches frontend: /topic/restaurant.{id}
+        messagingTemplate.convertAndSend(
+                "/topic/restaurant." + savedOrder.restaurantId(),
+                savedOrder
+        );
+
+        return savedOrder;
     }
 
     /* USER ORDER HISTORY */
@@ -39,6 +48,14 @@ public class OrderController {
             @PathVariable Long orderId,
             @RequestBody OrderStatusUpdateRequest request
     ) {
-        return orderService.updateStatus(orderId, request);
+        OrderStatusUpdateRequest updated = orderService.updateStatus(orderId, request);
+
+        // 🔔 Notify specific customer — matches frontend: /user/queue/order-status
+        messagingTemplate.convertAndSend(
+                "/topic/user." + updated.userId() + ".order-status",
+                updated
+        );
+
+        return updated;
     }
 }

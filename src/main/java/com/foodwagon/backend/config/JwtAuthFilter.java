@@ -10,12 +10,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
+
+    // ✅ Skip JWT filter entirely for WebSocket connections
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/ws");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -43,8 +51,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (username != null &&
                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            var userDetails =
-                    userDetailsService.loadUserByUsername(username);
+            var userDetails = userDetailsService.loadUserByUsername(username);
 
             if (jwtService.isTokenValid(jwt, username)) {
 

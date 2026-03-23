@@ -1,6 +1,5 @@
 package com.foodwagon.backend.service;
 
-
 import com.foodwagon.backend.dto.order.*;
 import com.foodwagon.backend.entity.Order;
 import com.foodwagon.backend.entity.OrderItem;
@@ -9,32 +8,45 @@ import com.foodwagon.backend.entity.User;
 import com.foodwagon.backend.enums.OrderStatus;
 import com.foodwagon.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j  // ADD THIS for logging
 public class OrderService {
 
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
+
     /* ---------------- PLACE ORDER ---------------- */
     public OrderResponse placeOrder(CreateOrderRequest request) {
         // Fetch restaurant
         Restaurant restaurant = restaurantRepository
                 .findById(request.restaurantId())
-                .orElse(null); // later: handle not found properly
+                .orElse(null);
 
         String restaurantName = restaurant != null ? restaurant.getName() : null;
+
+        // Fetch customer to get their name
+        String customerName = "Customer"; // Default fallback
+        try {
+            User customer = userRepository.findById(request.userId()).orElse(null);
+            if (customer != null) {
+                customerName = customer.getName();
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch customer name for userId: {}", request.userId(), e);
+        }
 
         Order order = Order.builder()
                 .userId(request.userId())
                 .restaurantId(request.restaurantId())
-                .restaurantName(restaurantName)          // ✅ use dynamic name
+                .restaurantName(restaurantName)
                 .totalAmount(request.totalAmount())
                 .deliveryAddress(request.deliveryAddress())
                 .paymentMethod(request.paymentMethod())
@@ -55,9 +67,8 @@ public class OrderService {
         order.setItems(items);
         Order saved = orderRepository.save(order);
 
-        return mapToOrderResponse(saved);
+        return mapToOrderResponse(saved, customerName); // Pass customer name to mapper
     }
-
 
     /* ---------------- USER ORDERS ---------------- */
     public List<CustomerOrderHistoryResponse> getUserOrders(Long userId) {
@@ -66,18 +77,19 @@ public class OrderService {
                 .map(this::mapToCustomerHistory)
                 .toList();
     }
+
     private CustomerOrderHistoryResponse mapToCustomerHistory(Order order) {
         // Fetch restaurant for this order
         Restaurant restaurant = restaurantRepository
                 .findById(order.getRestaurantId())
-                .orElse(null); // later: handle not found properly
+                .orElse(null);
 
         String imageUrl = restaurant != null ? restaurant.getImageUrl() : null;
 
         return new CustomerOrderHistoryResponse(
                 order.getId(),
-                order.getRestaurantName(),   // from order
-                imageUrl,                    // from restaurants table
+                order.getRestaurantName(),
+                imageUrl,
                 order.getTotalAmount(),
                 order.getStatus(),
                 order.getCreatedAt(),
@@ -94,19 +106,55 @@ public class OrderService {
                 .toList();
     }
 
-    /* ---------------- UPDATE STATUS ---------------- */
+    /* UPDATE STATUS */
     public OrderStatusUpdateRequest updateStatus(Long orderId, OrderStatusUpdateRequest request) {
         Order order = orderRepository.findById(orderId).orElseThrow();
         order.setStatus(request.status());
         orderRepository.save(order);
-        return request;
+
+        // Include orderId and userId in response
+        return new OrderStatusUpdateRequest(
+                order.getId(),      // orderId
+                order.getUserId(),  // userId
+                request.status()    // status
+        );
     }
 
     /* ---------------- MAPPERS ---------------- */
-    private OrderResponse mapToOrderResponse(Order order) {
+
+    // UPDATED: Now accepts customerName parameter
+    private OrderResponse mapToOrderResponse(Order order, String customerName) {
         return new OrderResponse(
                 order.getId(),
                 order.getUserId(),
+                customerName,  // ADDED: customer name
+                order.getRestaurantId(),
+                order.getRestaurantName(),
+                mapItems(order),
+                order.getTotalAmount(),
+                order.getStatus(),  // Convert enum to string
+                order.getCreatedAt(),
+                order.getDeliveryAddress()
+        );
+    }
+
+    // Keep the original method for backward compatibility if needed
+    private OrderResponse mapToOrderResponse(Order order) {
+        // Fetch customer name
+        String customerName = "Customer";
+        try {
+            User customer = userRepository.findById(order.getUserId()).orElse(null);
+            if (customer != null) {
+                customerName = customer.getName();
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch customer name for userId: {}", order.getUserId(), e);
+        }
+
+        return new OrderResponse(
+                order.getId(),
+                order.getUserId(),
+                customerName,  // ADDED: customer name
                 order.getRestaurantId(),
                 order.getRestaurantName(),
                 mapItems(order),
@@ -117,12 +165,10 @@ public class OrderService {
         );
     }
 
-
-
     private RestaurantOrderQueueResponse mapToRestaurantQueue(Order order) {
         User user = userRepository.findById(order.getUserId()).orElse(null);
 
-        String userPhone = (user != null && user.getId() != null)
+        String userPhone = (user != null && user.getPhone() != null)
                 ? user.getPhone().toString()
                 : null;
         String userName = (user != null) ? user.getName() : null;
@@ -137,8 +183,6 @@ public class OrderService {
                 order.getCreatedAt()
         );
     }
-
-
 
     private List<OrderItemDTO> mapItems(Order order) {
         return order.getItems().stream()

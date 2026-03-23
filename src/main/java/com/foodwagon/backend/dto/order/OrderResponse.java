@@ -7,6 +7,7 @@ import java.util.List;
 public record OrderResponse(
         Long id,
         Long userId,
+        String customerName,  // Add this field
         Long restaurantId,
         String restaurantName,
         List<OrderItemDTO> items,

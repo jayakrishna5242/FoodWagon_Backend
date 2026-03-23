@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -54,10 +55,7 @@ public class SecurityConfig {
                 "Origin"
         ));
 
-        configuration.setExposedHeaders(Arrays.asList(
-                "Authorization"
-        ));
-
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
@@ -66,21 +64,45 @@ public class SecurityConfig {
         return source;
     }
 
+    // ✅ Dedicated filter chain for WebSocket — bypasses JWT completely
+    @Bean
+    public SecurityFilterChain webSocketSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/ws/**")
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll()
+                );
+        return http.build();
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // ─── Public auth routes ───────────────────────────
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/auth/forgot-password/**").permitAll()
+
+                        // ─── Public restaurant routes ─────────────────────
                         .requestMatchers("/api/restaurants/**").permitAll()
                         .requestMatchers("/api/restaurants/search/**").permitAll()
+
+                        // ─── Partner public routes (no JWT needed) ────────
                         .requestMatchers("/api/partner/login").permitAll()
                         .requestMatchers("/api/partner/register").permitAll()
+                        .requestMatchers("/api/partner/*/restaurant").permitAll() // ✅ fetchPartnerRestaurant
+                        .requestMatchers("/api/partner/**").permitAll()           // ✅ all other partner routes
+
+                        // ─── Menu items public read ───────────────────────
+                        .requestMatchers("/api/menu-items/**").permitAll()        // ✅ menu fetch for customers
+
+                        // ─── Orders need auth ─────────────────────────────
                         .requestMatchers("/api/orders/**").authenticated()
-                        .requestMatchers("/api/menu-items/**").authenticated()
-                        .requestMatchers("/api/partner/**").authenticated()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->

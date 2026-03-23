@@ -58,7 +58,11 @@
             <scope>runtime</scope>
         </dependency>
 
-
+        <!-- WebSockets -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
 
 
         <!-- JWT -->
