@@ -126,4 +126,8 @@ public class RestaurantService {
 
         return newStatus;
     }
+
+    public Restaurant getById(Long id) {
+        return restaurantRepo.findById(id).orElseThrow();
+    }
 }

@@ -114,8 +114,6 @@ public class OrderService {
 
         // Include orderId and userId in response
         return new OrderStatusUpdateRequest(
-                order.getId(),      // orderId
-                order.getUserId(),  // userId
                 request.status()    // status
         );
     }

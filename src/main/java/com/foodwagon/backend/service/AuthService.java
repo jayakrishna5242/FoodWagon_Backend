@@ -54,6 +54,7 @@ public class AuthService {
         return new AuthResponse(token, userResponse);
     }
 
+
     public AuthResponse login(LoginRequest r) {
 
         User user = userRepository.findByEmail(r.identifier())
@@ -81,4 +82,40 @@ public class AuthService {
 
         return new AuthResponse(token, userResponse);
     }
+
+
+
+    public AuthResponse update(RegisterRequest r) {
+
+        boolean userExists =
+                (r.email() != null && userRepository.findByEmail(r.email()).isPresent())
+                        || (!r.phone() .equals("0000000000") && userRepository.findByPhone(r.phone()).isPresent());
+
+        if (!userExists) {
+            return null;
+        }
+
+        User user = User.builder()
+                .name(r.name())
+                .phone(r.phone())
+                .password(passwordEncoder.encode(r.password())) // ✅ only encrypted password
+                .role(UserRole.CUSTOMER)
+                .build();
+
+        User saved = userRepository.save(user);
+
+        UserResponse userResponse = new UserResponse(
+                saved.getId(),
+                saved.getName(),
+                saved.getEmail(),
+                saved.getRole().name()
+        );
+
+        String token = jwtService.generateToken(saved.getEmail());
+
+        return new AuthResponse(token, userResponse);
+    }
+
+
+
 }

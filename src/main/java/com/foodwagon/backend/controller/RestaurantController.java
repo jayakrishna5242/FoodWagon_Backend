@@ -3,6 +3,7 @@ package com.foodwagon.backend.controller;
 import com.foodwagon.backend.dto.restaurant.RestaurantResponse;
 import com.foodwagon.backend.dto.restaurant.SearchResponse;
 import com.foodwagon.backend.entity.MenuItem;
+import com.foodwagon.backend.entity.Restaurant;
 import com.foodwagon.backend.service.RestaurantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,11 @@ public class RestaurantController {
         return restaurantService.getMenu(restaurantId);
     }
 
+
+    @GetMapping("/{id}")
+    public Restaurant res(@PathVariable Long id){
+        return restaurantService.getById(id);
+    }
 
     @PatchMapping("/{id}/toggle")
     public ResponseEntity<Boolean> toggleStatus(@PathVariable Long id) {

@@ -42,9 +42,6 @@ public class OrderController {
             @RequestBody OrderStatusUpdateRequest request
     ) {
         OrderStatusUpdateRequest updated = orderService.updateStatus(orderId, request);
-
-
-
         return updated;
     }
 }

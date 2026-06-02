@@ -74,7 +74,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/auth/forgot-password/**").permitAll()
 
+                        .requestMatchers("/api/genie/**").permitAll()
+                        .requestMatchers("/api/supermarket/**").permitAll()
+                        .requestMatchers("/api/fresh-stores/**").permitAll()
+                        .requestMatchers("/api/fresh-store-categories/**").permitAll()
                         // ─── Public restaurant routes ─────────────────────
+                        .requestMatchers("/api/fresh-stores/category/{category}/**").permitAll()                   // ─── Public restaurant routes ─────────────────────
+
                         .requestMatchers("/api/restaurants/**").permitAll()
                         .requestMatchers("/api/restaurants/search/**").permitAll()
 

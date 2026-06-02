@@ -59,6 +59,25 @@ public class AuthController {
         return ResponseEntity.ok(result);
     }
 
+    @PutMapping("/updateprofile")
+    public ResponseEntity<?> updateProfile(@RequestBody RegisterRequest request){
+
+
+        AuthResponse result = authService.register(request);
+
+        if (result == null) {
+            return ResponseEntity.status(409).body(
+                    new ApiErrorResponse(
+                            "User with this email / phone already exists",
+                            409,
+                            Instant.now()
+                    )
+            );
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
     // ===============================
     // FORGOT PASSWORD (Send OTP)
     // ===============================
